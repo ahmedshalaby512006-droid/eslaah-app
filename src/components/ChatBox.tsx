@@ -115,7 +115,7 @@ export const ChatBox: React.FC<ChatBoxProps> = ({ requestId, currentUserId, curr
                     <div>
                       <span>Location Sent 📍:</span>
                       <a
-                        href={msg.text.split('📍 موقعي الحالي: ')[1] || msg.text}
+                        href={msg.text.split('📍 Send My Location ')[1] || msg.text}
                         target="_blank"
                         rel="noreferrer"
                         className="underline block mt-1 font-semibold"
