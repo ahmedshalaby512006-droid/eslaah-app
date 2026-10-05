@@ -2,6 +2,7 @@ import toast from "react-hot-toast";
 import React, { useState, useEffect, FormEvent } from 'react';
 import { LucideIcon, Car, Truck, Bike, Bus, AlertCircle, Zap, Shield, HelpCircle, Star, Phone, UserCheck, Wrench, MessageSquare, MapPin, RotateCcw, CheckCircle } from 'lucide-react';
 import api from '../api/client';
+import { parseLocationAndIssue } from '../utils/locationParser';
 import { ChatBox } from '../components/ChatBox';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -160,10 +161,10 @@ export const CustomerDashboard: React.FC = () => {
         parts.push(gpsLocationUrl);
       }
       if (manualAddress.trim()) {
-        parts.push(manualAddress.trim());
+        parts.push(`[LOC]: ${manualAddress.trim()}`);
       }
       if (issueDescription.trim()) {
-        parts.push(issueDescription.trim());
+        parts.push(`[ISSUE]: ${issueDescription.trim()}`);
       }
       const combinedAddress = parts.join('\n');
 
@@ -285,22 +286,20 @@ export const CustomerDashboard: React.FC = () => {
           </div>
 
           {/* Request Details */}
-          <div className="grid grid-cols-1 gap-4 py-4 sm:grid-cols-2">
-            <div>
-              <p className="text-xs font-semibold text-slate-500">{t('vehicleType')}</p>
-              <p className="font-bold text-slate-900 mt-0.5">{t(activeRequest.vehicleType)}</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500">{t('locationNotes')}</p>
-              <div className="mt-1.5 space-y-2 text-xs sm:text-sm">
-                {activeRequest.addressDescription?.split('\n').map((line: string, index: number) => {
-                  const trimmed = line.trim();
-                  if (!trimmed) return null;
-                  const isUrl = trimmed.startsWith('http');
-                  return isUrl ? (
-                    <div key={index} className="pt-0.5">
+          {(() => {
+            const { mapUrl, manualAddress, issueDetails } = parseLocationAndIssue(activeRequest.addressDescription);
+            return (
+              <div className="py-4 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500">{t('vehicleType')}</p>
+                    <p className="font-bold text-slate-900 mt-0.5">{t(activeRequest.vehicleType)}</p>
+                  </div>
+                  {mapUrl && (
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 mb-1">{t('gpsLabel')}</p>
                       <a
-                        href={trimmed}
+                        href={mapUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-100 hover:border-amber-400 transition shadow-2xs"
@@ -309,15 +308,33 @@ export const CustomerDashboard: React.FC = () => {
                         <span>{t('openGoogleMaps')}</span>
                       </a>
                     </div>
-                  ) : (
-                    <p key={index} className="text-slate-800 font-semibold break-words bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                      {trimmed}
+                  )}
+                </div>
+
+                {manualAddress && (
+                  <div className="rounded-xl border border-amber-200/90 bg-amber-50/50 p-3">
+                    <span className="text-xs font-black text-amber-950 block mb-1">
+                      📍 {t('locationLabel')}:
+                    </span>
+                    <p className="text-xs sm:text-sm text-slate-800 font-semibold break-words">
+                      {manualAddress}
                     </p>
-                  );
-                })}
+                  </div>
+                )}
+
+                {issueDetails && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <span className="text-xs font-black text-slate-800 block mb-1">
+                      🔧 {t('issueLabel')}:
+                    </span>
+                    <p className="text-xs sm:text-sm text-slate-700 font-medium break-words">
+                      {issueDetails}
+                    </p>
+                  </div>
+                )}
               </div>
-            </div>
-          </div>
+            );
+          })()}
 
           {/* Assigned Technician Card (if Accepted or In Progress) */}
           {activeRequest.status !== 'QUEUED' && activeRequest.technician && (

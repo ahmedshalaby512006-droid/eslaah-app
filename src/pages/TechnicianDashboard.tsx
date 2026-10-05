@@ -3,6 +3,7 @@ import { socket } from '../socket';
 import React, { useEffect, useState } from 'react';
 import { MapPin, Car, CheckCircle2, Phone, User, Wrench, Clock } from 'lucide-react';
 import api from '../api/client';
+import { parseLocationAndIssue } from '../utils/locationParser';
 import { ServiceRequest } from './CustomerDashboard';
 import { ChatBox } from '../components/ChatBox';
 import { useAuth } from '../context/AuthContext';
@@ -428,29 +429,45 @@ export const TechnicianDashboard: React.FC = () => {
           </div>
 
           {acceptedJob.addressDescription && (() => {
-            const lines = acceptedJob.addressDescription.split('\n');
-            const mapUrl = lines.find((l: string) => l.trim().startsWith('http'))?.trim();
-            const notes = lines.filter((l: string) => !l.trim().startsWith('http')).join(' ');
-            const finalHref = mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(acceptedJob.addressDescription)}`;
+            const { mapUrl, manualAddress, issueDetails } = parseLocationAndIssue(acceptedJob.addressDescription);
+            const finalHref = mapUrl || (manualAddress ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(manualAddress)}` : null);
 
             return (
-              <div className="mb-4 w-full">
-                <a
-                  href={finalHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between p-3 bg-white border border-amber-200 hover:bg-amber-50/50 rounded-xl transition"
-                >
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-amber-600" />
-                    <span className="text-sm font-bold text-slate-900">{t('openCustomerMaps')}</span>
+              <div className="mb-4 w-full space-y-2.5">
+                {finalHref && (
+                  <a
+                    href={finalHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between p-3 bg-white border border-amber-200 hover:bg-amber-50/50 rounded-xl transition"
+                  >
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-amber-600" />
+                      <span className="text-sm font-bold text-slate-900">{t('openCustomerMaps')}</span>
+                    </div>
+                    <span className="text-xs bg-slate-950 text-amber-400 px-3 py-1.5 rounded-lg font-black">{t('startRoute')}</span>
+                  </a>
+                )}
+
+                {manualAddress && (
+                  <div className="rounded-xl border border-amber-200/90 bg-white p-3 text-xs sm:text-sm">
+                    <span className="font-extrabold text-amber-950 block mb-1">
+                      📍 {t('locationLabel')}:
+                    </span>
+                    <p className="text-slate-800 font-semibold break-words">
+                      {manualAddress}
+                    </p>
                   </div>
-                  <span className="text-xs bg-slate-950 text-amber-400 px-3 py-1.5 rounded-lg font-black">{t('startRoute')}</span>
-                </a>
-                {notes && (
-                  <div className="mt-2 text-xs text-slate-700 bg-white p-3 rounded-xl border border-amber-200">
-                    <span className="font-extrabold text-amber-900">{t('issueDetails')} </span>
-                    {notes}
+                )}
+
+                {issueDetails && (
+                  <div className="rounded-xl border border-slate-200 bg-white p-3 text-xs sm:text-sm">
+                    <span className="font-extrabold text-slate-900 block mb-1">
+                      🔧 {t('issueLabel')}:
+                    </span>
+                    <p className="text-slate-700 font-medium break-words">
+                      {issueDetails}
+                    </p>
                   </div>
                 )}
               </div>
@@ -544,28 +561,44 @@ export const TechnicianDashboard: React.FC = () => {
                         </p>
                       );
                     }
-                    const lines = req.addressDescription.split('\n');
-                    const mapUrl = lines.find((l: string) => l.trim().startsWith('http'))?.trim() ||
-                                   req.addressDescription.match(/https?:\/\/[^\s]+/)?.[0];
-                    const notes = lines.filter((l: string) => !l.trim().startsWith('http')).join(' ').trim();
+                    const { mapUrl, manualAddress, issueDetails } = parseLocationAndIssue(req.addressDescription);
 
                     return (
-                      <div className="mt-2 space-y-1.5">
+                      <div className="mt-2.5 space-y-2">
                         {mapUrl && (
-                          <a
-                            href={mapUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900 hover:bg-amber-100 hover:border-amber-400 transition"
-                          >
-                            <MapPin className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                            <span>{t('openGoogleMaps')}</span>
-                          </a>
+                          <div>
+                            <a
+                              href={mapUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900 hover:bg-amber-100 hover:border-amber-400 transition"
+                            >
+                              <MapPin className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                              <span>{t('openGoogleMaps')}</span>
+                            </a>
+                          </div>
                         )}
-                        {notes && (
-                          <p className="text-xs text-slate-600 line-clamp-2 break-words">
-                            {notes}
-                          </p>
+
+                        {manualAddress && (
+                          <div className="rounded-lg bg-amber-50/50 p-2 border border-amber-100/80 text-xs">
+                            <span className="font-bold text-amber-950 block text-[11px] mb-0.5">
+                              📍 {t('locationLabel')}:
+                            </span>
+                            <p className="text-slate-800 font-semibold line-clamp-2 break-words">
+                              {manualAddress}
+                            </p>
+                          </div>
+                        )}
+
+                        {issueDetails && (
+                          <div className="rounded-lg bg-slate-50 p-2 border border-slate-200/80 text-xs">
+                            <span className="font-bold text-slate-800 block text-[11px] mb-0.5">
+                              🔧 {t('issueLabel')}:
+                            </span>
+                            <p className="text-slate-700 font-medium line-clamp-2 break-words">
+                              {issueDetails}
+                            </p>
+                          </div>
                         )}
                       </div>
                     );
