@@ -196,20 +196,6 @@ export const TechnicianDashboard: React.FC = () => {
     }
   };
 
-  const handleTechCancelJob = async () => {
-    if (!acceptedJob) return;
-    if (!confirm(t('cancelJobConfirm'))) return;
-    try {
-      await api.patch(`/requests/${acceptedJob.id}/tech-cancel`);
-      setAcceptedJob(null);
-      toast.success(t('jobCancelledSuccess'));
-      void fetchQueuedJobs();
-      void fetchActiveJob();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to cancel job');
-    }
-  };
-
   if (user?.isBanned) {
     return (
       <div className="flex min-h-[calc(100vh-65px)] items-center justify-center p-4">
@@ -502,17 +488,6 @@ export const TechnicianDashboard: React.FC = () => {
                 </button>
               )}
             </div>
-
-            {/* Cancel / unassign button for technician before repair */}
-            {acceptedJob.status === 'ACCEPTED' && (
-              <button
-                type="button"
-                onClick={() => { void handleTechCancelJob(); }}
-                className="w-full sm:w-auto rounded-xl border border-red-200 bg-red-50/80 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-100 transition"
-              >
-                {t('cancelJobBtn')}
-              </button>
-            )}
           </div>
 
           {/* Chat with Customer */}

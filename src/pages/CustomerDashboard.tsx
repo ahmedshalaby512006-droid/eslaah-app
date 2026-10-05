@@ -368,19 +368,6 @@ export const CustomerDashboard: React.FC = () => {
             </div>
           )}
 
-          {/* Cancel button for customer if order is accepted / active */}
-          {activeRequest.status !== 'QUEUED' && activeRequest.status !== 'COMPLETED' && (
-            <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
-              <button
-                type="button"
-                onClick={handleCancelRequest}
-                className="w-full sm:w-auto rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-100 hover:border-red-300 transition"
-              >
-                {t('cancelRequestBtn')}
-              </button>
-            </div>
-          )}
-
           {/* QUEUED Offers List */}
           {activeRequest.status === 'QUEUED' && (
             <div className="mt-4">
