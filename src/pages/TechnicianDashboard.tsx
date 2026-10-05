@@ -518,11 +518,41 @@ export const TechnicianDashboard: React.FC = () => {
                       {new Date(req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <h3 className="text-base font-bold text-slate-900">{t(req.malfunctionCategory)}</h3>
-                  <p className="mt-2 line-clamp-3 flex items-start gap-1 text-xs text-slate-600 whitespace-pre-line break-words">
-                    <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-600" />
-                    {req.addressDescription || t('addressUnlisted')}
-                  </p>
+                  <h3 className="text-base font-bold text-slate-900 mb-1">{t(req.malfunctionCategory)}</h3>
+                  {(() => {
+                    if (!req.addressDescription) {
+                      return (
+                        <p className="mt-2 text-xs text-slate-400 italic">
+                          {t('addressUnlisted')}
+                        </p>
+                      );
+                    }
+                    const lines = req.addressDescription.split('\n');
+                    const mapUrl = lines.find((l: string) => l.trim().startsWith('http'))?.trim() ||
+                                   req.addressDescription.match(/https?:\/\/[^\s]+/)?.[0];
+                    const notes = lines.filter((l: string) => !l.trim().startsWith('http')).join(' ').trim();
+
+                    return (
+                      <div className="mt-2 space-y-1.5">
+                        {mapUrl && (
+                          <a
+                            href={mapUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-900 hover:bg-amber-100 hover:border-amber-400 transition"
+                          >
+                            <MapPin className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                            <span>{t('openGoogleMaps')}</span>
+                          </a>
+                        )}
+                        {notes && (
+                          <p className="text-xs text-slate-600 line-clamp-2 break-words">
+                            {notes}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
