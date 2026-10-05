@@ -101,8 +101,15 @@ export const TechnicianDashboard: React.FC = () => {
 
     const handleRequestCancelled = (data: { requestId: string }) => {
       setQueuedRequests((prev) => prev.filter((r) => r.id !== data.requestId));
-      setAcceptedJob((prev: any) => (prev?.id === data.requestId ? null : prev));
+      setAcceptedJob((prev: any) => {
+        if (prev?.id === data.requestId) {
+          toast.error(t('customerCancelledToast'));
+          return null;
+        }
+        return prev;
+      });
       void fetchQueuedJobs();
+      void fetchActiveJob();
     };
 
     socket.on('data_updated', handleDataUpdated);
@@ -186,6 +193,20 @@ export const TechnicianDashboard: React.FC = () => {
       }
     } catch {
       alert('Status update failed');
+    }
+  };
+
+  const handleTechCancelJob = async () => {
+    if (!acceptedJob) return;
+    if (!confirm(t('cancelJobConfirm'))) return;
+    try {
+      await api.patch(`/requests/${acceptedJob.id}/tech-cancel`);
+      setAcceptedJob(null);
+      toast.success(t('jobCancelledSuccess'));
+      void fetchQueuedJobs();
+      void fetchActiveJob();
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Failed to cancel job');
     }
   };
 
@@ -451,32 +472,45 @@ export const TechnicianDashboard: React.FC = () => {
           })()}
 
           {/* Action Stages */}
-          <div className="flex flex-wrap gap-2.5 pt-2 border-t border-amber-200/60">
+          <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-amber-200/60">
+            <div className="flex flex-wrap gap-2.5">
+              {acceptedJob.status === 'ACCEPTED' && (
+                <button
+                  type="button"
+                  onClick={() => { void handleUpdateStatus('ARRIVED'); }}
+                  className="w-full sm:w-auto rounded-xl bg-amber-500 px-6 py-2.5 text-xs font-black text-slate-950 hover:bg-amber-600 transition shadow-sm"
+                >
+                  {t('markAsArrived')}
+                </button>
+              )}
+              {acceptedJob.status === 'ARRIVED' && (
+                <button
+                  type="button"
+                  onClick={() => { void handleUpdateStatus('IN_PROGRESS'); }}
+                  className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 px-6 py-2.5 text-xs font-black text-white hover:from-orange-600 hover:to-amber-700 transition shadow-sm"
+                >
+                  {t('startRepair')}
+                </button>
+              )}
+              {acceptedJob.status === 'IN_PROGRESS' && (
+                <button
+                  type="button"
+                  onClick={() => { void handleUpdateStatus('COMPLETED'); }}
+                  className="w-full sm:w-auto rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-black text-white hover:bg-emerald-700 transition shadow-sm"
+                >
+                  {t('completeJob')}
+                </button>
+              )}
+            </div>
+
+            {/* Cancel / unassign button for technician before repair */}
             {acceptedJob.status === 'ACCEPTED' && (
               <button
                 type="button"
-                onClick={() => { void handleUpdateStatus('ARRIVED'); }}
-                className="w-full sm:w-auto rounded-xl bg-amber-500 px-6 py-2.5 text-xs font-black text-slate-950 hover:bg-amber-600 transition shadow-sm"
+                onClick={() => { void handleTechCancelJob(); }}
+                className="w-full sm:w-auto rounded-xl border border-red-200 bg-red-50/80 px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-100 transition"
               >
-                {t('markAsArrived')}
-              </button>
-            )}
-            {acceptedJob.status === 'ARRIVED' && (
-              <button
-                type="button"
-                onClick={() => { void handleUpdateStatus('IN_PROGRESS'); }}
-                className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 px-6 py-2.5 text-xs font-black text-white hover:from-orange-600 hover:to-amber-700 transition shadow-sm"
-              >
-                {t('startRepair')}
-              </button>
-            )}
-            {acceptedJob.status === 'IN_PROGRESS' && (
-              <button
-                type="button"
-                onClick={() => { void handleUpdateStatus('COMPLETED'); }}
-                className="w-full sm:w-auto rounded-xl bg-emerald-600 px-6 py-2.5 text-xs font-black text-white hover:bg-emerald-700 transition shadow-sm"
-              >
-                {t('completeJob')}
+                {t('cancelJobBtn')}
               </button>
             )}
           </div>
