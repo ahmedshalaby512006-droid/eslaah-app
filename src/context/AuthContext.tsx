@@ -9,10 +9,12 @@ export interface User {
   fullName: string;
   phoneNumber?: string;
   role: UserRole;
+  isBanned?: boolean;
+  technicianProfile?: any;
 }
 
 export interface LoginPayload {
-  email: string;
+  phoneNumber: string;
   password: string;
 }
 
@@ -34,7 +36,8 @@ interface AuthContextType {
   token: string | null;
   login: (credentials: LoginPayload) => Promise<void>;
   register: (data: RegisterPayload) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  updateUser: (user: User) => void;
   isAuthenticated: boolean;
   isLoading: boolean;
 }
@@ -55,9 +58,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const parsedUser: User = JSON.parse(savedUser);
         setToken(savedToken);
         setUser(parsedUser);
+        
+        // Verify user against backend silently
+        api.get('/auth/me').then(res => {
+          if (res.data) {
+            setUser(res.data);
+            localStorage.setItem('user', JSON.stringify(res.data));
+          }
+        }).catch(err => {
+          if (err.response?.status === 403) {
+            // User is banned or invalid
+            const bannedUser = { ...parsedUser, isBanned: true };
+            setUser(bannedUser);
+            localStorage.setItem('user', JSON.stringify(bannedUser));
+          }
+        });
       } catch {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+    localStorage.removeItem('active_tech_job');
       }
     }
     setIsLoading(false);
@@ -77,13 +96,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await api.post('/auth/register', userData);
   };
 
-  const logout = (): void => {
+  const updateUser = (updatedUser: User): void => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+  const logout = async (): Promise<void> => {
+    try {
+      if (token) await api.post('/auth/logout');
+    } catch (err) {}
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
   };
 
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (token) {
+      // initial ping
+      api.post('/auth/ping').catch(() => {});
+      // ping every 30 seconds
+      interval = setInterval(() => {
+        api.post('/auth/ping').catch(() => {});
+      }, 60000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [token]);
+  
   return (
     <AuthContext.Provider
       value={{
@@ -92,6 +133,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         login,
         register,
         logout,
+          updateUser,
         isAuthenticated: !!token,
         isLoading,
       }}
