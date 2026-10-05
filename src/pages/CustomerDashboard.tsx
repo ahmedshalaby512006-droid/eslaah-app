@@ -1,6 +1,6 @@
 import toast from "react-hot-toast";
 import React, { useState, useEffect, FormEvent } from 'react';
-import { LucideIcon, Car, Truck, Bike, Bus, AlertCircle, Zap, Shield, HelpCircle, Star, Phone, UserCheck, Wrench, MessageSquare } from 'lucide-react';
+import { LucideIcon, Car, Truck, Bike, Bus, AlertCircle, Zap, Shield, HelpCircle, Star, Phone, UserCheck, Wrench, MessageSquare, MapPin, RotateCcw, CheckCircle } from 'lucide-react';
 import api from '../api/client';
 import { ChatBox } from '../components/ChatBox';
 import { useAuth } from '../context/AuthContext';
@@ -50,8 +50,9 @@ export const CustomerDashboard: React.FC = () => {
   const { t } = useLanguage();
   const [vehicleType, setVehicleType] = useState<string>('SEDAN');
   const [malfunctionCategory, setMalfunctionCategory] = useState<string>('MECHANICAL');
-  const [addressDescription, setAddressDescription] = useState<string>('');
-  const [issueDescription, setIssueDescription] = useState('');
+  const [gpsLocationUrl, setGpsLocationUrl] = useState<string>('');
+  const [manualAddress, setManualAddress] = useState<string>('');
+  const [issueDescription, setIssueDescription] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [isLocating, setIsLocating] = useState<boolean>(false);
 
@@ -132,8 +133,9 @@ export const CustomerDashboard: React.FC = () => {
       (position) => {
         const { latitude, longitude } = position.coords;
         const mapsUrl = `https://www.google.com/maps?q=${latitude},${longitude}`;
-        setAddressDescription(mapsUrl);
+        setGpsLocationUrl(mapsUrl);
         setIsLocating(false);
+        toast.success(t('gpsCapturedSuccess'));
       },
       (error) => {
         console.error(error);
@@ -146,15 +148,35 @@ export const CustomerDashboard: React.FC = () => {
 
   const handleCreateRequest = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
+    if (!gpsLocationUrl && !manualAddress.trim()) {
+      alert(t('locationRequiredAlert'));
+      return;
+    }
+
     setLoading(true);
     try {
+      const parts: string[] = [];
+      if (gpsLocationUrl) {
+        parts.push(gpsLocationUrl);
+      }
+      if (manualAddress.trim()) {
+        parts.push(manualAddress.trim());
+      }
+      if (issueDescription.trim()) {
+        parts.push(issueDescription.trim());
+      }
+      const combinedAddress = parts.join('\n');
+
       const response = await api.post<ServiceRequest>('/requests', {
         vehicleType,
         malfunctionCategory,
-        addressDescription: `${addressDescription}\n ${issueDescription}`,
+        addressDescription: combinedAddress,
       });
       setActiveRequest(response.data);
       toast.success(t('requestCreatedSuccess'));
+      setGpsLocationUrl('');
+      setManualAddress('');
+      setIssueDescription('');
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to submit request');
     } finally {
@@ -270,22 +292,26 @@ export const CustomerDashboard: React.FC = () => {
             </div>
             <div>
               <p className="text-xs font-semibold text-slate-500">{t('locationNotes')}</p>
-              <div className="mt-1 space-y-1 text-xs sm:text-sm">
+              <div className="mt-1.5 space-y-2 text-xs sm:text-sm">
                 {activeRequest.addressDescription?.split('\n').map((line: string, index: number) => {
-                  const isUrl = line.trim().startsWith('http');
+                  const trimmed = line.trim();
+                  if (!trimmed) return null;
+                  const isUrl = trimmed.startsWith('http');
                   return isUrl ? (
-                    <a
-                      key={index}
-                      href={line.trim()}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-amber-700 font-bold underline break-all hover:text-amber-800"
-                    >
-                      {t('openGoogleMaps')}
-                    </a>
+                    <div key={index} className="pt-0.5">
+                      <a
+                        href={trimmed}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-100 hover:border-amber-400 transition shadow-2xs"
+                      >
+                        <MapPin className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                        <span>{t('openGoogleMaps')}</span>
+                      </a>
+                    </div>
                   ) : (
-                    <p key={index} className="text-slate-800 font-semibold break-words">
-                      {line}
+                    <p key={index} className="text-slate-800 font-semibold break-words bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                      {trimmed}
                     </p>
                   );
                 })}
@@ -480,34 +506,75 @@ export const CustomerDashboard: React.FC = () => {
             </div>
           </div>
 
+          {/* 3. GPS Location (Google Maps) */}
           <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs sm:p-6">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-sm font-bold tracking-tight text-slate-900">
-                {t('currentLocationTitle')}
-              </h2>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <div>
+                <h2 className="text-sm font-bold tracking-tight text-slate-900">
+                  {t('gpsLocationTitle')}
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {t('gpsAutoDesc')}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={handleGetCurrentLocation}
                 disabled={isLocating}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 rounded-xl transition-colors border border-amber-300 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-amber-950 bg-amber-400 hover:bg-amber-500 rounded-xl transition-all border border-amber-500 shadow-xs active:scale-95 disabled:opacity-50"
               >
-                <svg className={`h-3.5 w-3.5 ${isLocating ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+                <MapPin className={`h-4 w-4 ${isLocating ? 'animate-bounce text-amber-900' : 'text-slate-950'}`} />
                 {isLocating ? t('locating') : t('useCurrentLocation')}
               </button>
             </div>
+
+            <div className="mt-3">
+              <input
+                type="text"
+                readOnly
+                value={gpsLocationUrl}
+                placeholder={t('gpsNotCaptured')}
+                className={`w-full rounded-xl border p-3 text-xs sm:text-sm font-mono transition select-all focus:outline-none ${
+                  gpsLocationUrl
+                    ? 'border-emerald-400 bg-emerald-50/60 text-emerald-950 font-semibold cursor-default'
+                    : 'border-slate-300 bg-slate-100/70 text-slate-500 cursor-not-allowed'
+                }`}
+              />
+              {gpsLocationUrl && (
+                <div className="mt-2.5 flex items-center justify-between flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    {t('gpsCapturedSuccess')}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setGpsLocationUrl('')}
+                    className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-red-600 transition"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    <span>إعادة التحديد / Reset</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 4. Manual Descriptive Address */}
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs sm:p-6">
+            <h2 className="text-sm font-bold tracking-tight text-slate-900 mb-2">
+              {t('manualAddressTitle')}
+            </h2>
             <textarea
               rows={3}
-              value={addressDescription}
-              onChange={(e) => setAddressDescription(e.target.value)}
-              placeholder={t('locationPlaceholder')}
-              className="w-full rounded-xl border border-slate-300 p-3 text-sm focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition"
+              value={manualAddress}
+              onChange={(e) => setManualAddress(e.target.value)}
+              placeholder={t('manualAddressPlaceholder')}
+              className="w-full rounded-xl border border-slate-300 bg-slate-50/50 p-3.5 text-sm text-slate-800 placeholder-slate-400 transition-all focus:border-amber-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-200"
             />
           </div>
 
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs">
+          {/* 5. Issue Details */}
+          <div className="rounded-2xl border border-slate-200/90 bg-white p-5 shadow-xs sm:p-6">
             <label className="block text-sm font-bold text-slate-900 mb-3">
               {t('issueDetailsTitle')}
             </label>

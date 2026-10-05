@@ -99,12 +99,20 @@ export const TechnicianDashboard: React.FC = () => {
       }
     };
 
+    const handleRequestCancelled = (data: { requestId: string }) => {
+      setQueuedRequests((prev) => prev.filter((r) => r.id !== data.requestId));
+      setAcceptedJob((prev: any) => (prev?.id === data.requestId ? null : prev));
+      void fetchQueuedJobs();
+    };
+
     socket.on('data_updated', handleDataUpdated);
     socket.on('request_accepted', handleRequestAccepted);
+    socket.on('request_cancelled', handleRequestCancelled);
 
     return () => {
       socket.off('data_updated', handleDataUpdated);
       socket.off('request_accepted', handleRequestAccepted);
+      socket.off('request_cancelled', handleRequestCancelled);
     };
   }, [techProfile, user, t]);
 
