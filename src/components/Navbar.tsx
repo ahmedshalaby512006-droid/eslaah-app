@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { Wrench, LogOut, User as UserIcon, Globe } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
 
 export const Navbar: React.FC = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -32,6 +33,9 @@ export const Navbar: React.FC = () => {
         </Link>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Notification Bell Button */}
+          <NotificationBell />
+
           {/* Language Switcher Button */}
           <button
             type="button"

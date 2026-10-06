@@ -1,0 +1,17 @@
+{
+  "name": "إصلاح | Eslaah",
+  "short_name": "إصلاح",
+  "description": "منصة الإغاثة على الطريق وصيانة السيارات الفورية",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#d97706",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
