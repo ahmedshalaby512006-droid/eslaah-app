@@ -22,7 +22,7 @@ export const NotificationBell: React.FC = () => {
       setPermission(getNotificationPermission());
       registerServiceWorker();
 
-      // If user is logged in and already granted permission, ensure subscription is active
+      // If user is logged in and already granted permission, ensure this device's subscription is registered
       if (isAuthenticated && getNotificationPermission() === 'granted') {
         subscribeToPushNotifications().catch(() => {});
       }
@@ -35,11 +35,17 @@ export const NotificationBell: React.FC = () => {
     if (loading) return;
 
     if (permission === 'granted') {
-      // Permission already granted: Offer sending a test notification to verify
+      // Permission already granted: Ensure subscription is registered for THIS device, then send a test push
       setLoading(true);
+      try {
+        await subscribeToPushNotifications();
+      } catch (err) {
+        console.warn('Subscription sync warning:', err);
+      }
+
       toast.promise(sendTestNotification(), {
         loading: 'جاري إرسال إشعار تجريبي لهاتفك...',
-        success: 'تم إرسال الإشعار بنجاح! راجع شريط الإشعارات.',
+        success: 'تم إرسال الإشعار بنجاح! راجع شريط الإشعارات أعلى الشاشة.',
         error: 'حدث خطأ أثناء إرسال الإشعار التجريبي.',
       }).finally(() => setLoading(false));
       return;
@@ -54,12 +60,11 @@ export const NotificationBell: React.FC = () => {
 
       if (success) {
         toast.success('تم تفعيل إشعارات الهاتف بنجاح! 🔔 ستصلك تنبيهات الطلبات والعروض فوراً.');
-        // Send a quick welcome push
         setTimeout(() => {
           sendTestNotification().catch(() => {});
-        }, 1000);
+        }, 800);
       } else if (currentPerm === 'denied') {
-        toast.error('تم حظر الإشعارات من إعدادات المتصفح. يرجى تفعيلها من شريط العنوان.');
+        toast.error('تم حظر الإشعارات من إعدادات المتصفح على هاتفك. يرجى تفعيلها من إعدادات الموقع.');
       } else {
         toast('لم يتم تفعيل الإشعارات بعد.', { icon: 'ℹ️' });
       }
@@ -84,7 +89,7 @@ export const NotificationBell: React.FC = () => {
       }`}
       title={
         isGranted
-          ? 'الإشعارات مفعلة - اضغط لإرسال إشعار تجريبي'
+          ? 'الإشعارات مفعلة - اضغط لإرسال إشعار تجريبي لهاتفك'
           : 'اضغط لتفعيل إشعارات الهاتف عند وصول طلبات أو عروض جديدة'
       }
     >

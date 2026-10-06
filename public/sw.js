@@ -1,4 +1,4 @@
-// Service Worker for Eslaah Web Push Notifications (Standard W3C / Google FCM)
+// Service Worker for Eslaah Web Push Notifications (Standard W3C / Android FCM)
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -9,34 +9,35 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-  if (!event.data) return;
-
-  try {
-    const data = event.data.json();
-    const title = data.title || 'إصلاح | إشعار جديد';
-
-    const options = {
-      body: data.body || '',
-      icon: data.icon || '/favicon.svg',
-      badge: data.badge || '/favicon.svg',
-      tag: data.tag || 'eslaah-general',
-      dir: 'rtl',
-      lang: 'ar',
-      vibrate: [200, 100, 200],
-      renotify: true,
-      requireInteraction: false,
-      data: {
-        url: data.url || '/',
-        dateOfArrival: Date.now(),
-      },
-    };
-
-    event.waitUntil(
-      self.registration.showNotification(title, options)
-    );
-  } catch (err) {
-    console.error('Error handling push event in Service Worker:', err);
+  let data = {};
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (err) {
+      data = { title: 'إصلاح | تنبيه جديد', body: event.data.text() };
+    }
   }
+
+  const title = data.title || 'إصلاح | تنبيه جديد';
+
+  const options = {
+    body: data.body || '',
+    icon: '/icon-192.png',
+    badge: '/badge-72.png',
+    tag: data.tag || `eslaah-${Date.now()}`,
+    dir: 'rtl',
+    lang: 'ar',
+    vibrate: [200, 100, 200],
+    requireInteraction: false,
+    data: {
+      url: data.url || '/',
+      dateOfArrival: Date.now(),
+    },
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {
@@ -45,7 +46,6 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // If a tab of the app is already open, focus it and navigate
       for (let i = 0; i < clientList.length; i++) {
         const client = clientList[i];
         if ('focus' in client) {
@@ -55,7 +55,6 @@ self.addEventListener('notificationclick', (event) => {
           return client.focus();
         }
       }
-      // If no tab is open, open a new window
       if (self.clients.openWindow) {
         return self.clients.openWindow(targetUrl);
       }
