@@ -4,6 +4,7 @@ import { LucideIcon, Car, Truck, Bike, Bus, AlertCircle, Zap, Shield, HelpCircle
 import api from '../api/client';
 import { parseLocationAndIssue } from '../utils/locationParser';
 import { ChatBox } from '../components/ChatBox';
+import { NotificationBell } from '../components/NotificationBell';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { socket } from '../socket';
@@ -263,6 +264,9 @@ export const CustomerDashboard: React.FC = () => {
 
   return (
     <div className="mx-auto max-w-4xl p-4 sm:p-6 lg:p-8">
+      {/* Notifications Banner */}
+      <NotificationBell variant="banner" />
+
       {activeRequest ? (
         <div className="rounded-2xl border-2 border-amber-500/70 bg-white p-6 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600" />

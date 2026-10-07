@@ -6,6 +6,7 @@ import api from '../api/client';
 import { parseLocationAndIssue } from '../utils/locationParser';
 import { ServiceRequest } from './CustomerDashboard';
 import { ChatBox } from '../components/ChatBox';
+import { NotificationBell } from '../components/NotificationBell';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -338,6 +339,9 @@ export const TechnicianDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Notification Banner */}
+      <NotificationBell variant="banner" />
 
       {/* Header bar */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">

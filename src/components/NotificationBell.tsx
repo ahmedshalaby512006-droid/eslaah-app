@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, BellRing, CheckCircle2 } from 'lucide-react';
+import { Bell, BellRing, CheckCircle2, ShieldAlert } from 'lucide-react';
 import {
   isPushSupported,
   getNotificationPermission,
@@ -10,15 +10,21 @@ import {
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 
-export const NotificationBell: React.FC = () => {
+interface NotificationBellProps {
+  variant?: 'button' | 'banner';
+}
+
+export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'button' }) => {
   const { isAuthenticated } = useAuth();
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [loading, setLoading] = useState(false);
-  const [supported, setSupported] = useState(false);
+  const [supported, setSupported] = useState(true);
 
   useEffect(() => {
-    if (isPushSupported()) {
-      setSupported(true);
+    const isSupported = isPushSupported();
+    setSupported(isSupported);
+
+    if (isSupported) {
       setPermission(getNotificationPermission());
       registerServiceWorker();
 
@@ -29,13 +35,35 @@ export const NotificationBell: React.FC = () => {
     }
   }, [isAuthenticated]);
 
-  if (!supported || !isAuthenticated) return null;
+  if (!isAuthenticated) return null;
 
   const handleToggleNotifications = async () => {
     if (loading) return;
 
+    if (!supported) {
+      toast(
+        (t) => (
+          <div className="flex flex-col gap-1 text-xs text-right">
+            <span className="font-bold flex items-center gap-1 text-amber-700">
+              <ShieldAlert className="h-4 w-4" /> يتطلب اتصالاً آمناً (HTTPS)
+            </span>
+            <span>
+              نظام أندرويد يشترط فتح الموقع عبر رابط مشفر (https://...) لتمكين الإشعارات الخارجية في الخلفية.
+            </span>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="mt-1 self-start bg-amber-600 text-white px-2 py-0.5 rounded text-[10px]"
+            >
+              حسناً
+            </button>
+          </div>
+        ),
+        { duration: 6000 }
+      );
+      return;
+    }
+
     if (permission === 'granted') {
-      // Permission already granted: Ensure subscription is registered for THIS device, then send a test push
       setLoading(true);
       try {
         await subscribeToPushNotifications();
@@ -45,7 +73,7 @@ export const NotificationBell: React.FC = () => {
 
       toast.promise(sendTestNotification(), {
         loading: 'جاري إرسال إشعار تجريبي لهاتفك...',
-        success: 'تم إرسال الإشعار بنجاح! راجع شريط الإشعارات أعلى الشاشة.',
+        success: 'تم إرسال الإشعار بنجاح! راجع شريط التنبيهات.',
         error: 'حدث خطأ أثناء إرسال الإشعار التجريبي.',
       }).finally(() => setLoading(false));
       return;
@@ -75,7 +103,49 @@ export const NotificationBell: React.FC = () => {
     }
   };
 
-  const isGranted = permission === 'granted';
+  const isGranted = permission === 'granted' && supported;
+
+  if (variant === 'banner') {
+    return (
+      <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-3.5 sm:p-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 shrink-0 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-700">
+            {isGranted ? <BellRing className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">تنبيهات وإشعارات الهاتف اللحظية</h3>
+            <p className="text-xs text-slate-600">
+              {isGranted
+                ? 'الإشعارات مفعلة بنجاح، ستصلك تنبيهات العروض وحالة الصيانة مباشرة على هاتفك.'
+                : 'فعّل الإشعارات لتصلك تنبيهات العروض وحالة الصيانة حتى عند إغلاق المتصفح.'}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleToggleNotifications}
+          disabled={loading}
+          className={`shrink-0 rounded-xl px-4 py-2 text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5 ${
+            isGranted
+              ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
+              : 'bg-amber-500 text-slate-950 hover:bg-amber-600 hover:text-white'
+          }`}
+        >
+          {isGranted ? (
+            <>
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <span>مفعلة (فحص إشعار)</span>
+            </>
+          ) : (
+            <>
+              <Bell className="h-4 w-4" />
+              <span>تفعيل الإشعارات الآن</span>
+            </>
+          )}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <button
